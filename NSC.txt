@@ -1,0 +1,870 @@
+#SHA-1
+import hashlib
+
+def compute_sha1(input_string):
+    # Encode the input string to bytes
+    input_bytes = input_string.encode('utf-8')
+    # Create a SHA-1 hash object
+    sha1_hash = hashlib.sha1()
+    # Update the hash object with the input bytes
+    sha1_hash.update(input_bytes)
+    # Get the hexadecimal representation of the hash
+    return sha1_hash.hexdigest()
+
+# Example usage
+text = "Hello, World!"
+hash_result = compute_sha1(text)
+print(f"SHA-1 hash of '{text}': {hash_result}")
+
+
+#MD-5
+import hashlib
+
+def compute_md5(input_string):
+    # Encode the input string into bytes
+    input_bytes = input_string.encode('utf-8')
+    # Create an MD5 hash object
+    md5_hash = hashlib.md5()
+    # Update the hash object with the input bytes
+    md5_hash.update(input_bytes)
+    # Get the hexadecimal representation of the hash
+    return md5_hash.hexdigest()
+
+# Example usage
+text = "Hello, World!"
+hash_result = compute_md5(text)
+print(f"MD5 hash of '{text}': {hash_result}")
+
+
+#COLUMNAR
+def columnar_encrypt(plaintext, key):
+    # Remove spaces and prepare text
+    plaintext = plaintext.replace(" ", "")
+    key_length = len(key)
+    ciphertext = ""
+
+    # Create an array to store rows
+    columns = [''] * key_length
+
+    # Fill the columns row by row
+    for index, char in enumerate(plaintext):
+        column = index % key_length
+        columns[column] += char
+
+    # Rearrange columns according to the key order
+    sorted_key = sorted((k, i) for i, k in enumerate(key))
+    for _, column_index in sorted_key:
+        ciphertext += columns[column_index]
+
+    return ciphertext
+
+def columnar_decrypt(ciphertext, key):
+    key_length = len(key)
+    num_rows = len(ciphertext) // key_length
+    remainder = len(ciphertext) % key_length
+
+    # Determine the lengths of each column
+    column_lengths = [num_rows + 1 if i < remainder else num_rows for i in range(key_length)]
+
+    # Create an array for the columns
+    columns = [''] * key_length
+    start = 0
+
+    # Fill the columns column by column
+    sorted_key = sorted((k, i) for i, k in enumerate(key))
+    for _, column_index in sorted_key:
+        end = start + column_lengths[column_index]
+        columns[column_index] = ciphertext[start:end]
+        start = end
+
+    # Reconstruct the plaintext row by row
+    plaintext = ""
+    for i in range(num_rows + 1):
+        for col in columns:
+            if i < len(col):
+                plaintext += col[i]
+
+    return plaintext
+
+# Example usage
+plaintext = "WEAREDISCOVEREDFLEEATONCE"
+key = "4312567"
+
+encrypted = columnar_encrypt(plaintext, key)
+decrypted = columnar_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Key: {key}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+#ADVANCED COLUMNAR
+import math
+
+def advanced_columnar_encrypt(plaintext, key):
+    # Remove spaces and prepare text
+    plaintext = plaintext.replace(" ", "")
+    key_length = len(key)
+    
+    # Calculate the number of rows needed
+    num_rows = math.ceil(len(plaintext) / key_length)
+    padding_char = 'X'
+    
+    # Pad the plaintext to fill the grid completely
+    padding_length = num_rows * key_length - len(plaintext)
+    plaintext += padding_char * padding_length
+
+    # Create the grid row by row
+    grid = [plaintext[i:i + key_length] for i in range(0, len(plaintext), key_length)]
+
+    # Rearrange columns based on sorted key order
+    sorted_key = sorted((k, i) for i, k in enumerate(key))
+    ciphertext = ""
+    for _, column_index in sorted_key:
+        for row in grid:
+            ciphertext += row[column_index]
+
+    return ciphertext
+
+def advanced_columnar_decrypt(ciphertext, key):
+    key_length = len(key)
+    num_rows = len(ciphertext) // key_length
+
+    # Determine the order of columns based on the key
+    sorted_key = sorted((k, i) for i, k in enumerate(key))
+    column_order = [index for _, index in sorted_key]
+
+    # Calculate the lengths of each column
+    num_full_columns = len(ciphertext) % key_length
+    column_lengths = [
+        num_rows + 1 if i < num_full_columns else num_rows for i in range(key_length)
+    ]
+
+    # Fill the columns with ciphertext
+    columns = []
+    start = 0
+    for length in column_lengths:
+        columns.append(ciphertext[start:start + length])
+        start += length
+
+    # Reconstruct the plaintext row by row using the original key order
+    plaintext = ""
+    for i in range(num_rows):
+        for column_index in range(key_length):
+            if i < len(columns[column_order[column_index]]):
+                plaintext += columns[column_order[column_index]][i]
+
+    # Remove padding characters
+    return plaintext.rstrip('X')
+
+# Example usage
+plaintext = "WEAREDISCOVEREDFLEEATONCE"
+key = "31452"  # The key determines the column order
+
+encrypted = advanced_columnar_encrypt(plaintext, key)
+decrypted = advanced_columnar_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Key: {key}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+#EUCLEDIAN
+def euclidean_encrypt(plaintext, key):
+    # Convert plaintext to numbers (ASCII values)
+    encrypted = [(ord(char) * key) % 256 for char in plaintext]
+    return encrypted
+
+def euclidean_decrypt(encrypted_text, key):
+    # Find the modular multiplicative inverse of the key mod 256
+    def modular_inverse(a, m):
+        m0, x0, x1 = m, 0, 1
+        while a > 1:
+            q = a // m
+            m, a = a % m, m
+            x0, x1 = x1 - q * x0, x0
+        return x1 + m0 if x1 < 0 else x1
+
+    inverse_key = modular_inverse(key, 256)
+    # Decrypt using the inverse key
+    decrypted = [chr((char * inverse_key) % 256) for char in encrypted_text]
+    return ''.join(decrypted)
+
+# Example usage
+plaintext = "HELLO"
+key = 7  # Key must be coprime to 256 for encryption to work
+encrypted = euclidean_encrypt(plaintext, key)
+decrypted = euclidean_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+
+#ADVANCED EUCLEDIAN
+def advanced_euclidean_encrypt(plaintext, key1, key2):
+    # Convert plaintext to numbers (ASCII values)
+    encrypted = [(ord(char) * key1 + key2) % 256 for char in plaintext]
+    return encrypted
+
+def advanced_euclidean_decrypt(encrypted_text, key1, key2):
+    # Find the modular inverse of key1 mod 256
+    def modular_inverse(a, m):
+        m0, x0, x1 = m, 0, 1
+        while a > 1:
+            q = a // m
+            m, a = a % m, m
+            x0, x1 = x1 - q * x0, x0
+        return x1 + m0 if x1 < 0 else x1
+
+    inverse_key1 = modular_inverse(key1, 256)
+    # Decrypt using both keys
+    decrypted = [chr((inverse_key1 * (char - key2)) % 256) for char in encrypted_text]
+    return ''.join(decrypted)
+
+# Example usage
+plaintext = "HELLO"
+key1, key2 = 7, 3  # Key1 must be coprime to 256
+encrypted = advanced_euclidean_encrypt(plaintext, key1, key2)
+decrypted = advanced_euclidean_decrypt(encrypted, key1, key2)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+
+#VIGENERE CIPHER 
+def vigenere_encrypt(text, key):
+    encrypted_text = []
+    key = key.upper()  # Convert key to uppercase for consistency
+    key_index = 0
+
+    for char in text:
+        if char.isalpha():  # Only process alphabetic characters
+            shift = ord(key[key_index]) - ord('A')  # Calculate shift from the key
+            if char.isupper():
+                encrypted_char = chr((ord(char) - ord('A') + shift) % 26 + ord('A'))
+            else:
+                encrypted_char = chr((ord(char) - ord('a') + shift) % 26 + ord('a'))
+            encrypted_text.append(encrypted_char)
+            key_index = (key_index + 1) % len(key)  # Move to the next key character
+        else:
+            encrypted_text.append(char)  # Keep non-alphabetic characters as is
+
+    return ''.join(encrypted_text)
+
+def vigenere_decrypt(encrypted_text, key):
+    decrypted_text = []
+    key = key.upper()
+    key_index = 0
+
+    for char in encrypted_text:
+        if char.isalpha():
+            shift = ord(key[key_index]) - ord('A')
+            if char.isupper():
+                decrypted_char = chr((ord(char) - ord('A') - shift) % 26 + ord('A'))
+            else:
+                decrypted_char = chr((ord(char) - ord('a') - shift) % 26 + ord('a'))
+            decrypted_text.append(decrypted_char)
+            key_index = (key_index + 1) % len(key)
+        else:
+            decrypted_text.append(char)
+
+    return ''.join(decrypted_text)
+
+# Example usage
+plaintext = "Hello, World!"
+key = "KEY"
+encrypted = vigenere_encrypt(plaintext, key)
+decrypted = vigenere_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+#VERNAM CIPHER
+def vernam_encrypt(plaintext, key):
+    if len(plaintext) != len(key):
+        raise ValueError("The length of the plaintext and the key must be the same.")
+
+    encrypted_text = []
+    for p_char, k_char in zip(plaintext, key):
+        # XOR each character from the plaintext and key
+        encrypted_char = chr(ord(p_char) ^ ord(k_char))
+        encrypted_text.append(encrypted_char)
+    return ''.join(encrypted_text)
+
+def vernam_decrypt(encrypted_text, key):
+    if len(encrypted_text) != len(key):
+        raise ValueError("The length of the encrypted text and the key must be the same.")
+
+    decrypted_text = []
+    for e_char, k_char in zip(encrypted_text, key):
+        # XOR each character from the encrypted text and key
+        decrypted_char = chr(ord(e_char) ^ ord(k_char))
+        decrypted_text.append(decrypted_char)
+    return ''.join(decrypted_text)
+
+# Example usage
+plaintext = "HELLO"
+key = "XMCKL"  # The key must be the same length as the plaintext
+encrypted = vernam_encrypt(plaintext, key)
+decrypted = vernam_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Key: {key}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+
+#RAIL FENCE
+def rail_fence_encrypt(plaintext, rails):
+    # Create an empty matrix for the zigzag pattern
+    matrix = [['' for _ in range(len(plaintext))] for _ in range(rails)]
+    
+    # Fill the matrix in a zigzag pattern
+    row, direction = 0, 1
+    for i, char in enumerate(plaintext):
+        matrix[row][i] = char
+        row += direction
+        if row == 0 or row == rails - 1:
+            direction *= -1  # Change direction at the top or bottom rail
+
+    # Read the matrix row by row to form the ciphertext
+    ciphertext = ''.join([''.join(row) for row in matrix])
+    return ciphertext
+
+def rail_fence_decrypt(ciphertext, rails):
+    # Create an empty matrix for the zigzag pattern
+    matrix = [['' for _ in range(len(ciphertext))] for _ in range(rails)]
+    
+    # Mark positions in the zigzag pattern
+    row, direction = 0, 1
+    for i in range(len(ciphertext)):
+        matrix[row][i] = '*'
+        row += direction
+        if row == 0 or row == rails - 1:
+            direction *= -1
+
+    # Fill the matrix with the ciphertext characters
+    index = 0
+    for r in range(rails):
+        for c in range(len(ciphertext)):
+            if matrix[r][c] == '*':
+                matrix[r][c] = ciphertext[index]
+                index += 1
+
+    # Read the plaintext in zigzag order
+    row, direction = 0, 1
+    plaintext = []
+    for i in range(len(ciphertext)):
+        plaintext.append(matrix[row][i])
+        row += direction
+        if row == 0 or row == rails - 1:
+            direction *= -1
+
+    return ''.join(plaintext)
+
+# Example usage
+plaintext = "HELLO_WORLD"
+rails = 3
+
+encrypted = rail_fence_encrypt(plaintext, rails)
+decrypted = rail_fence_decrypt(encrypted, rails)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+#3DES
+from Crypto.Cipher import DES3
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
+
+def generate_3des_key():
+    # 3DES requires a 16 or 24-byte key
+    while True:
+        key = get_random_bytes(24)
+        try:
+            # Ensure the key is valid for 3DES
+            DES3.adjust_key_parity(key)
+            return key
+        except ValueError:
+            continue
+
+def encrypt_3des(plaintext, key):
+    cipher = DES3.new(key, DES3.MODE_CBC)  # Using CBC mode
+    iv = cipher.iv  # Initialization vector
+    padded_plaintext = pad(plaintext.encode('utf-8'), DES3.block_size)
+    ciphertext = cipher.encrypt(padded_plaintext)
+    return iv, ciphertext
+
+def decrypt_3des(ciphertext, key, iv):
+    cipher = DES3.new(key, DES3.MODE_CBC, iv=iv)
+    decrypted_data = cipher.decrypt(ciphertext)
+    plaintext = unpad(decrypted_data, DES3.block_size).decode('utf-8')
+    return plaintext
+
+# Example usage
+key = generate_3des_key()  # Generate a random key
+plaintext = "Hello, Triple DES!"
+
+# Encrypt the plaintext
+iv, ciphertext = encrypt_3des(plaintext, key)
+
+# Decrypt the ciphertext
+decrypted_text = decrypt_3des(ciphertext, key, iv)
+
+print(f"Plaintext: {plaintext}")
+print(f"Key: {key.hex()}")
+print(f"IV: {iv.hex()}")
+print(f"Ciphertext (hex): {ciphertext.hex()}")
+print(f"Decrypted text: {decrypted_text}")
+
+
+#CEASAR CIPHER 
+def caesar_encrypt(plaintext, shift):
+    ciphertext = ""
+    for char in plaintext:
+        # Encrypt only alphabetic characters
+        if char.isalpha():
+            # Check if character is uppercase or lowercase
+            start = 65 if char.isupper() else 97
+            # Apply the shift
+            shifted_char = chr((ord(char) - start + shift) % 26 + start)
+            ciphertext += shifted_char
+        else:
+            # Non-alphabetic characters remain the same
+            ciphertext += char
+    return ciphertext
+
+def caesar_decrypt(ciphertext, shift):
+    plaintext = ""
+    for char in ciphertext:
+        # Decrypt only alphabetic characters
+        if char.isalpha():
+            # Check if character is uppercase or lowercase
+            start = 65 if char.isupper() else 97
+            # Apply the inverse shift
+            shifted_char = chr((ord(char) - start - shift) % 26 + start)
+            plaintext += shifted_char
+        else:
+            # Non-alphabetic characters remain the same
+            plaintext += char
+    return plaintext
+
+# Example usage
+plaintext = "Hello, World!"
+shift = 3  # You can change the shift value
+
+# Encrypt the plaintext
+encrypted = caesar_encrypt(plaintext, shift)
+
+# Decrypt the ciphertext
+decrypted = caesar_decrypt(encrypted, shift)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+
+#SUBSTITUTION CIPHER
+import string
+
+def substitution_encrypt(plaintext, key):
+    # Create a translation table for substitution
+    alphabet = string.ascii_lowercase
+    translation_table = str.maketrans(alphabet, key)
+    
+    # Encrypt the plaintext using the translation table
+    ciphertext = plaintext.lower().translate(translation_table)
+    return ciphertext
+
+def substitution_decrypt(ciphertext, key):
+    # Create a translation table for decryption (reverse the key)
+    alphabet = string.ascii_lowercase
+    translation_table = str.maketrans(key, alphabet)
+    
+    # Decrypt the ciphertext using the translation table
+    plaintext = ciphertext.translate(translation_table)
+    return plaintext
+
+# Example usage
+plaintext = "HELLO WORLD"
+key = "qazwsxdrtfcvgbnhyujmkiolp"  # A shuffled alphabet (key)
+
+# Encrypt the plaintext
+encrypted = substitution_encrypt(plaintext, key)
+
+# Decrypt the ciphertext
+decrypted = substitution_decrypt(encrypted, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+#HILL CIPHER 
+import numpy as np
+
+# Function to convert a character to its corresponding number (A=0, B=1, ..., Z=25)
+def char_to_num(char):
+    return ord(char.upper()) - ord('A')
+
+# Function to convert a number back to a character (0=A, 1=B, ..., 25=Z)
+def num_to_char(num):
+    return chr(num + ord('A'))
+
+# Function to perform Hill Cipher encryption
+def hill_encrypt(plaintext, key_matrix):
+    # Remove spaces and ensure the length of plaintext is a multiple of the matrix size
+    plaintext = plaintext.replace(" ", "").upper()
+    if len(plaintext) % 2 != 0:
+        plaintext += 'X'  # Padding with 'X' if necessary to make length even
+    
+    # Convert plaintext into a list of numbers
+    plaintext_nums = [char_to_num(c) for c in plaintext]
+    
+    # Split plaintext into 2x1 blocks and multiply with the key matrix
+    ciphertext = []
+    for i in range(0, len(plaintext_nums), 2):
+        block = np.array([[plaintext_nums[i]], [plaintext_nums[i+1]]])
+        cipher_block = np.dot(key_matrix, block) % 26
+        ciphertext.extend(cipher_block.flatten())
+    
+    # Convert numbers back to characters
+    ciphertext = ''.join([num_to_char(num) for num in ciphertext])
+    return ciphertext
+
+# Function to perform Hill Cipher decryption
+def hill_decrypt(ciphertext, key_matrix):
+    # Calculate the inverse of the key matrix
+    det = int(np.round(np.linalg.det(key_matrix))) % 26
+    det_inv = pow(det, -1, 26)  # Modular inverse of the determinant
+    adj_matrix = np.round(np.linalg.inv(key_matrix) * det).astype(int) % 26
+    inv_key_matrix = (det_inv * adj_matrix) % 26
+    
+    # Convert ciphertext into a list of numbers
+    ciphertext_nums = [char_to_num(c) for c in ciphertext]
+    
+    # Split ciphertext into 2x1 blocks and multiply with the inverse key matrix
+    plaintext = []
+    for i in range(0, len(ciphertext_nums), 2):
+        block = np.array([[ciphertext_nums[i]], [ciphertext_nums[i+1]]])
+        plain_block = np.dot(inv_key_matrix, block) % 26
+        plaintext.extend(plain_block.flatten())
+    
+    # Convert numbers back to characters
+    plaintext = ''.join([num_to_char(num) for num in plaintext])
+    return plaintext
+
+# Example usage
+key_matrix = np.array([[6, 24], [1, 16]])  # Example 2x2 key matrix
+plaintext = "HELLO"
+
+# Encrypt the plaintext
+encrypted = hill_encrypt(plaintext, key_matrix)
+
+# Decrypt the ciphertext
+decrypted = hill_decrypt(encrypted, key_matrix)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+
+#PLAYFAIR
+import string
+
+# Helper function to create the Playfair matrix
+def create_playfair_matrix(key):
+    key = "".join(dict.fromkeys(key))  # Remove duplicates from key
+    alphabet = string.ascii_uppercase.replace('J', '')  # 'J' is omitted
+    matrix = key + ''.join([char for char in alphabet if char not in key])
+    matrix = [matrix[i:i + 5] for i in range(0, len(matrix), 5)]
+    return matrix
+
+# Helper function to format the plaintext (replace 'J' with 'I', and split into digraphs)
+def format_text(plaintext):
+    plaintext = plaintext.upper().replace('J', 'I')  # Convert all letters to uppercase and replace J with I
+    plaintext = "".join([char for char in plaintext if char.isalpha()])  # Remove non-alphabet characters
+    formatted_text = []
+    i = 0
+    while i < len(plaintext):
+        if i + 1 < len(plaintext) and plaintext[i] != plaintext[i + 1]:
+            formatted_text.append(plaintext[i:i + 2])
+            i += 2
+        else:
+            formatted_text.append(plaintext[i] + 'X')
+            i += 1
+    return formatted_text
+
+# Function to find the position of a letter in the matrix
+def find_position(matrix, char):
+    for i, row in enumerate(matrix):
+        if char in row:
+            return i, row.index(char)
+    return None
+
+# Playfair encryption function
+def playfair_encrypt(plaintext, key):
+    matrix = create_playfair_matrix(key)
+    formatted_text = format_text(plaintext)
+    ciphertext = []
+    for digraph in formatted_text:
+        row1, col1 = find_position(matrix, digraph[0])
+        row2, col2 = find_position(matrix, digraph[1])
+
+        # If both letters are in the same row
+        if row1 == row2:
+            ciphertext.append(matrix[row1][(col1 + 1) % 5])
+            ciphertext.append(matrix[row2][(col2 + 1) % 5])
+        # If both letters are in the same column
+        elif col1 == col2:
+            ciphertext.append(matrix[(row1 + 1) % 5][col1])
+            ciphertext.append(matrix[(row2 + 1) % 5][col2])
+        # If the letters form a rectangle
+        else:
+            ciphertext.append(matrix[row1][col2])
+            ciphertext.append(matrix[row2][col1])
+    return ''.join(ciphertext)
+
+# Playfair decryption function
+def playfair_decrypt(ciphertext, key):
+    matrix = create_playfair_matrix(key)
+    formatted_text = [ciphertext[i:i+2] for i in range(0, len(ciphertext), 2)]
+    plaintext = []
+    for digraph in formatted_text:
+        row1, col1 = find_position(matrix, digraph[0])
+        row2, col2 = find_position(matrix, digraph[1])
+
+        # If both letters are in the same row
+        if row1 == row2:
+            plaintext.append(matrix[row1][(col1 - 1) % 5])
+            plaintext.append(matrix[row2][(col2 - 1) % 5])
+        # If both letters are in the same column
+        elif col1 == col2:
+            plaintext.append(matrix[(row1 - 1) % 5][col1])
+            plaintext.append(matrix[(row2 - 1) % 5][col2])
+        # If the letters form a rectangle
+        else:
+            plaintext.append(matrix[row1][col2])
+            plaintext.append(matrix[row2][col1])
+    return ''.join(plaintext)
+
+# Example usage
+key = "KEYWORD"
+plaintext = "HELLO WORLD"
+ciphertext = playfair_encrypt(plaintext, key)
+decrypted_text = playfair_decrypt(ciphertext, key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#DES
+from Crypto.Cipher import DES
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+
+def des_encrypt(plaintext, key):
+    cipher = DES.new(key, DES.MODE_CBC)
+    ciphertext = cipher.encrypt(pad(plaintext.encode('utf-8'), DES.block_size))
+    return cipher.iv, ciphertext
+
+def des_decrypt(ciphertext, key, iv):
+    cipher = DES.new(key, DES.MODE_CBC, iv=iv)
+    decrypted = unpad(cipher.decrypt(ciphertext), DES.block_size)
+    return decrypted.decode('utf-8')
+
+# Example usage
+key = get_random_bytes(8)  # DES key must be exactly 8 bytes
+plaintext = "Hello, DES!"
+
+# Encrypt the plaintext
+iv, ciphertext = des_encrypt(plaintext, key)
+
+# Decrypt the ciphertext
+decrypted_text = des_decrypt(ciphertext, key, iv)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext.hex()}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#BLOWFISH 
+from Crypto.Cipher import Blowfish
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+
+def blowfish_encrypt(plaintext, key):
+    cipher = Blowfish.new(key, Blowfish.MODE_CBC)
+    ciphertext = cipher.encrypt(pad(plaintext.encode('utf-8'), Blowfish.block_size))
+    return cipher.iv, ciphertext
+
+def blowfish_decrypt(ciphertext, key, iv):
+    cipher = Blowfish.new(key, Blowfish.MODE_CBC, iv=iv)
+    decrypted = unpad(cipher.decrypt(ciphertext), Blowfish.block_size)
+    return decrypted.decode('utf-8')
+
+# Example usage
+key = get_random_bytes(16)  # Blowfish key length can range from 4 to 56 bytes (32 to 448 bits)
+plaintext = "Hello, Blowfish!"
+
+# Encrypt the plaintext
+iv, ciphertext = blowfish_encrypt(plaintext, key)
+
+# Decrypt the ciphertext
+decrypted_text = blowfish_decrypt(ciphertext, key, iv)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext.hex()}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#RC4
+def rc4(key, plaintext):
+    # Initialization of S box
+    S = list(range(256))
+    j = 0
+    for i in range(256):
+        j = (j + S[i] + key[i % len(key)]) % 256
+        S[i], S[j] = S[j], S[i]
+
+    # Key-stream generation and XOR with plaintext
+    i = j = 0
+    ciphertext = []
+    for char in plaintext:
+        i = (i + 1) % 256
+        j = (j + S[i]) % 256
+        S[i], S[j] = S[j], S[i]
+        K = S[(S[i] + S[j]) % 256]
+        ciphertext.append(chr(ord(char) ^ K))
+    
+    return ''.join(ciphertext)
+
+# Example usage
+key = [ord(c) for c in "Key"]  # RC4 key (converted to byte values)
+plaintext = "HELLO RC4"
+ciphertext = rc4(key, plaintext)
+decrypted_text = rc4(key, ciphertext)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#AES
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+
+def aes_encrypt(plaintext, key):
+    cipher = AES.new(key, AES.MODE_CBC)
+    ciphertext = cipher.encrypt(pad(plaintext.encode('utf-8'), AES.block_size))
+    return cipher.iv, ciphertext
+
+def aes_decrypt(ciphertext, key, iv):
+    cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+    decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    return decrypted.decode('utf-8')
+
+# Example usage
+key = get_random_bytes(16)  # AES key size can be 16, 24, or 32 bytes (128, 192, or 256 bits)
+plaintext = "Hello, AES!"
+
+# Encrypt the plaintext
+iv, ciphertext = aes_encrypt(plaintext, key)
+
+# Decrypt the ciphertext
+decrypted_text = aes_decrypt(ciphertext, key, iv)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext.hex()}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#RSA
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Random import get_random_bytes
+
+# Generate RSA keys (private and public)
+def generate_rsa_keys():
+    key = RSA.generate(2048)  # Generate a 2048-bit RSA key
+    private_key = key.export_key()
+    public_key = key.publickey().export_key()
+    return private_key, public_key
+
+# RSA encryption
+def rsa_encrypt(plaintext, public_key):
+    key = RSA.import_key(public_key)
+    cipher = PKCS1_OAEP.new(key)
+    ciphertext = cipher.encrypt(plaintext.encode('utf-8'))
+    return ciphertext
+
+# RSA decryption
+def rsa_decrypt(ciphertext, private_key):
+    key = RSA.import_key(private_key)
+    cipher = PKCS1_OAEP.new(key)
+    plaintext = cipher.decrypt(ciphertext)
+    return plaintext.decode('utf-8')
+
+# Example usage
+private_key, public_key = generate_rsa_keys()
+plaintext = "Hello, RSA!"
+
+# Encrypt the plaintext with the public key
+ciphertext = rsa_encrypt(plaintext, public_key)
+
+# Decrypt the ciphertext with the private key
+decrypted_text = rsa_decrypt(ciphertext, private_key)
+
+print(f"Plaintext: {plaintext}")
+print(f"Encrypted: {ciphertext.hex()}")
+print(f"Decrypted: {decrypted_text}")
+
+
+#DIFFLE
+import random
+
+# Function to perform Diffie-Hellman Key Exchange
+def diffie_hellman(p, g, private_key):
+    # Compute public key (g^private_key % p)
+    public_key = pow(g, private_key, p)
+    return public_key
+
+# Function to compute the shared secret key
+def compute_shared_secret(public_key, private_key, p):
+    # Compute shared secret (public_key^private_key % p)
+    shared_secret = pow(public_key, private_key, p)
+    return shared_secret
+
+# Example usage:
+# Public parameters
+p = 23  # Prime number
+g = 5   # Primitive root (base)
+
+# Private keys for Alice and Bob (secret values)
+alice_private_key = random.randint(1, p-1)  # Alice's private key (random between 1 and p-1)
+bob_private_key = random.randint(1, p-1)    # Bob's private key (random between 1 and p-1)
+
+# Step 1: Alice and Bob compute their public keys
+alice_public_key = diffie_hellman(p, g, alice_private_key)
+bob_public_key = diffie_hellman(p, g, bob_private_key)
+
+# Step 2: Alice and Bob exchange public keys and compute the shared secret
+alice_shared_secret = compute_shared_secret(bob_public_key, alice_private_key, p)
+bob_shared_secret = compute_shared_secret(alice_public_key, bob_private_key, p)
+
+# Output the results
+print(f"Alice's private key: {alice_private_key}")
+print(f"Bob's private key: {bob_private_key}")
+print(f"Alice's public key: {alice_public_key}")
+print(f"Bob's public key: {bob_public_key}")
+print(f"Alice's shared secret: {alice_shared_secret}")
+print(f"Bob's shared secret: {bob_shared_secret}")
+
+# Confirm if the shared secret is the same
+assert alice_shared_secret == bob_shared_secret, "Shared secrets do not match!"
+print("The shared secret is successfully established.")
